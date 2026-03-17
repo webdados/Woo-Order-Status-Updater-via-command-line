@@ -91,9 +91,6 @@ consumer_key    = ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 consumer_secret = cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [settings]
-# Status to set on every order in the CSV
-status_to_set   = completed
-
 # Seconds to wait for each API response before timing out
 request_timeout = 30
 
@@ -122,7 +119,6 @@ call_delay      = 1
 | `shop_url` | Base URL of your WooCommerce store, without trailing slash |
 | `consumer_key` | WooCommerce REST API consumer key (`ck_...`) |
 | `consumer_secret` | WooCommerce REST API consumer secret (`cs_...`) |
-| `status_to_set` | The order status to apply to every order in the CSV (e.g. `processing`, `completed`) |
 | `request_timeout` | Seconds to wait for an API response before considering the request timed out |
 | `retry_delay` | Seconds to wait between retry attempts when a request fails |
 | `max_retries` | How many times to attempt each order before marking it as failed |
@@ -134,24 +130,29 @@ All keys are required. The script will stop with a clear error message if any ke
 
 ## Preparing the CSV file
 
-The CSV file must have **WooCommerce order IDs in the first column**. Additional columns are ignored.
+The CSV file must have **two columns**: the first is the WooCommerce order ID and the second is the target status to set for that order.
+
+The column delimiter is detected automatically. Supported delimiters: comma (`,`), semicolon (`;`), tab, and pipe (`|`).
 
 A header row is optional — it is automatically detected and skipped if the first cell is not a number.
 
-Example:
+Example (comma-separated):
 ```
-order_id
-1001
-1002
-1003
+order_id,status
+1001,completed
+1002,processing
+1003,on-hold
 ```
 
-Or without a header:
+Example (semicolon-separated):
 ```
-1001
-1002
-1003
+order_id;status
+1001;completed
+1002;processing
+1003;on-hold
 ```
+
+Rows where the order ID is non-numeric or the status column is missing are skipped with a `[WARN]` message.
 
 ---
 
@@ -194,10 +195,9 @@ The script prints a line for each order, then a summary:
 ```
 [INFO] Shop            : https://your-shop.com
 [INFO] Orders to update: 3
-[INFO] Target status   : completed
 ------------------------------------------------------------
   [OK]   Order 1001  →  completed
-  [OK]   Order 1002  →  completed
+  [OK]   Order 1002  →  processing
   [FAIL] Order 1003  –  HTTP 404: {"code":"woocommerce_rest_shop_order_invalid_id"...}
 ------------------------------------------------------------
 [DONE] Success: 2   Failed: 1

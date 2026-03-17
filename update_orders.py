@@ -5,8 +5,10 @@ update_orders.py – Update WooCommerce order statuses via the REST API.
 Usage:
     python update_orders.py <path/to/orders.csv>
 
-The CSV must have WooCommerce order IDs in its first column.
+The CSV must have two columns: the first is the WooCommerce order ID and the
+second is the target status to set for that order.
 A header row is auto-detected and skipped when present.
+The column delimiter is detected automatically (comma, semicolon, tab, or pipe).
 
 Configuration is read from config.ini located in the same directory as this script.
 """
@@ -49,17 +51,8 @@ def load_config():
     except KeyError as exc:
         sys.exit(f"[ERROR] Missing key in [woocommerce] section of config.ini: {exc}")
 
-    if "your-shop.com" in shop_url or consumer_key.startswith("ck_xxx"):
-        sys.exit(
-            "[ERROR] config.ini still contains placeholder values.\n"
-            f"        Please edit: {CONFIG_PATH}"
-        )
-
     try:
         s = cfg["settings"]
-        status_to_set   = s["status_to_set"].strip()
-        if not status_to_set:
-            sys.exit("[ERROR] 'status_to_set' is empty in [settings] section of config.ini")
         request_timeout = int(s["request_timeout"])
         retry_delay     = int(s["retry_delay"])
         max_retries     = int(s["max_retries"])
@@ -69,31 +62,47 @@ def load_config():
     except ValueError as exc:
         sys.exit(f"[ERROR] Invalid value in [settings] section of config.ini: {exc}")
 
-    return shop_url, consumer_key, consumer_secret, status_to_set, request_timeout, retry_delay, max_retries, call_delay
+    return shop_url, consumer_key, consumer_secret, request_timeout, retry_delay, max_retries, call_delay
 
 
 # ---------------------------------------------------------------------------
 # CSV reading
 # ---------------------------------------------------------------------------
 
-def read_order_ids(csv_path):
-    """Return a list of order ID strings from the first column of a CSV file."""
-    ids = []
+def read_orders(csv_path):
+    """Return a list of (order_id, status) tuples from a CSV file.
+
+    The first column must contain WooCommerce order IDs and the second column
+    must contain the target status. A header row is auto-detected and skipped
+    when the first cell is non-numeric. The column delimiter is detected
+    automatically (comma, semicolon, tab, or pipe).
+    """
+    orders = []
     with open(csv_path, newline="", encoding="utf-8-sig") as fh:
-        reader = csv.reader(fh)
+        sample = fh.read(4096)
+        fh.seek(0)
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+        except csv.Error:
+            dialect = csv.excel  # fall back to comma-separated
+        reader = csv.reader(fh, dialect)
         for line_num, row in enumerate(reader, start=1):
             if not row:
                 continue
-            value = row[0].strip()
+            order_id = row[0].strip()
             # Auto-skip a header row when the first cell is non-numeric
-            if line_num == 1 and not value.lstrip("-").isdigit():
+            if line_num == 1 and not order_id.lstrip("-").isdigit():
                 print(f"[INFO] Skipping header row: {row}")
                 continue
-            if not value.lstrip("-").isdigit():
-                print(f"[WARN] Line {line_num}: skipping non-numeric value '{value}'")
+            if not order_id.lstrip("-").isdigit():
+                print(f"[WARN] Line {line_num}: skipping non-numeric order ID '{order_id}'")
                 continue
-            ids.append(value)
-    return ids
+            if len(row) < 2 or not row[1].strip():
+                print(f"[WARN] Line {line_num}: skipping order {order_id} – missing status in second column")
+                continue
+            status = row[1].strip()
+            orders.append((order_id, status))
+    return orders
 
 
 # ---------------------------------------------------------------------------
@@ -134,15 +143,14 @@ def main():
     if not os.path.isfile(csv_path):
         sys.exit(f"[ERROR] CSV file not found: {csv_path}")
 
-    shop_url, consumer_key, consumer_secret, status_to_set, request_timeout, retry_delay, max_retries, call_delay = load_config()
+    shop_url, consumer_key, consumer_secret, request_timeout, retry_delay, max_retries, call_delay = load_config()
 
-    order_ids = read_order_ids(csv_path)
-    if not order_ids:
-        sys.exit("[ERROR] No valid order IDs found in the CSV file.")
+    orders = read_orders(csv_path)
+    if not orders:
+        sys.exit("[ERROR] No valid orders found in the CSV file.")
 
     print(f"[INFO] Shop            : {shop_url}")
-    print(f"[INFO] Orders to update: {len(order_ids)}")
-    print(f"[INFO] Target status   : {status_to_set}")
+    print(f"[INFO] Orders to update: {len(orders)}")
     print("-" * 60)
 
     session = requests.Session()
@@ -152,11 +160,11 @@ def main():
     success_count = 0
     failure_count = 0
 
-    for i, order_id in enumerate(order_ids):
+    for i, (order_id, status) in enumerate(orders):
         try:
-            resp = update_order(session, shop_url, order_id, status_to_set, request_timeout, retry_delay, max_retries)
+            resp = update_order(session, shop_url, order_id, status, request_timeout, retry_delay, max_retries)
             if resp.status_code == 200:
-                print(f"  [OK]   Order {order_id}  →  {status_to_set}")
+                print(f"  [OK]   Order {order_id}  →  {status}")
                 success_count += 1
             else:
                 # Show a trimmed snippet of the error body for diagnostics
@@ -170,7 +178,7 @@ def main():
             print(f"  [FAIL] Order {order_id}  –  Request error: {exc}")
             failure_count += 1
 
-        if call_delay > 0 and i < len(order_ids) - 1:
+        if call_delay > 0 and i < len(orders) - 1:
             time.sleep(call_delay)
 
     print("-" * 60)

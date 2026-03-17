@@ -1,4 +1,4 @@
-order_id
-19306
-19301
-19271
+order_id;status
+123;on-hold
+19306;processing
+19301;completed
