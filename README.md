@@ -198,7 +198,7 @@ The script prints a line for each order, then a summary:
 ------------------------------------------------------------
   [OK]   Order 1001  →  completed
   [OK]   Order 1002  →  processing
-  [FAIL] Order 1003  –  HTTP 404: {"code":"woocommerce_rest_shop_order_invalid_id"...}
+  [FAIL] Order 1003  -  HTTP 404: {"code":"woocommerce_rest_shop_order_invalid_id"...}
 ------------------------------------------------------------
 [DONE] Success: 2   Failed: 1
 ```

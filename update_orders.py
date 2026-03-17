@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update_orders.py – Update WooCommerce order statuses via the REST API.
+update_orders.py - Update WooCommerce order statuses via the REST API.
 
 Usage:
     python update_orders.py <path/to/orders.csv>
@@ -98,7 +98,7 @@ def read_orders(csv_path):
                 print(f"[WARN] Line {line_num}: skipping non-numeric order ID '{order_id}'")
                 continue
             if len(row) < 2 or not row[1].strip():
-                print(f"[WARN] Line {line_num}: skipping order {order_id} – missing status in second column")
+                print(f"[WARN] Line {line_num}: skipping order {order_id} - missing status in second column")
                 continue
             status = row[1].strip()
             orders.append((order_id, status))
@@ -121,7 +121,7 @@ def update_order(session, base_url, order_id, status_to_set, request_timeout, re
         except requests.exceptions.RequestException as exc:
             if attempt < max_retries:
                 print(
-                    f"  [WARN] Order {order_id} – attempt {attempt} failed "
+                    f"  [WARN] Order {order_id} - attempt {attempt} failed "
                     f"({exc}). Retrying in {retry_delay}s…"
                 )
                 time.sleep(retry_delay)
@@ -138,7 +138,7 @@ def main():
         csv_path = sys.argv[1]
     else:
         csv_path = os.path.join(SCRIPT_DIR, "orders.csv")
-        print(f"[INFO] No CSV specified – defaulting to: {csv_path}")
+        print(f"[INFO] No CSV specified - defaulting to: {csv_path}")
 
     if not os.path.isfile(csv_path):
         sys.exit(f"[ERROR] CSV file not found: {csv_path}")
@@ -170,12 +170,12 @@ def main():
                 # Show a trimmed snippet of the error body for diagnostics
                 snippet = resp.text[:200].replace("\n", " ")
                 print(
-                    f"  [FAIL] Order {order_id}  –  HTTP {resp.status_code}: "
+                    f"  [FAIL] Order {order_id}  -  HTTP {resp.status_code}: "
                     f"{snippet}"
                 )
                 failure_count += 1
         except requests.exceptions.RequestException as exc:
-            print(f"  [FAIL] Order {order_id}  –  Request error: {exc}")
+            print(f"  [FAIL] Order {order_id}  -  Request error: {exc}")
             failure_count += 1
 
         if call_delay > 0 and i < len(orders) - 1:
