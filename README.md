@@ -14,16 +14,26 @@ A command-line Python script that reads a CSV file of WooCommerce order IDs and 
 
 ## Installation
 
-### macOS
+### macOS / Linux
 
 1. **Check if Python is installed:**
    ```bash
    python3 --version
    ```
-   If not installed, download it from [python.org](https://www.python.org/downloads/) or install via Homebrew:
-   ```bash
-   brew install python
-   ```
+   If not installed:
+
+   - **macOS** — download from [python.org](https://www.python.org/downloads/) or install via Homebrew:
+     ```bash
+     brew install python
+     ```
+   - **Debian / Ubuntu:**
+     ```bash
+     sudo apt update && sudo apt install python3 python3-pip
+     ```
+   - **Fedora / RHEL / CentOS:**
+     ```bash
+     sudo dnf install python3 python3-pip
+     ```
 
 2. **Navigate to the script folder:**
    ```bash
@@ -82,7 +92,7 @@ consumer_secret = cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [settings]
 # Status to set on every order in the CSV
-status_to_set   = delivered
+status_to_set   = completed
 
 # Seconds to wait for each API response before timing out
 request_timeout = 30
@@ -112,7 +122,7 @@ call_delay      = 1
 | `shop_url` | Base URL of your WooCommerce store, without trailing slash |
 | `consumer_key` | WooCommerce REST API consumer key (`ck_...`) |
 | `consumer_secret` | WooCommerce REST API consumer secret (`cs_...`) |
-| `status_to_set` | The order status to apply to every order in the CSV (e.g. `delivered`, `completed`) |
+| `status_to_set` | The order status to apply to every order in the CSV (e.g. `processing`, `completed`) |
 | `request_timeout` | Seconds to wait for an API response before considering the request timed out |
 | `retry_delay` | Seconds to wait between retry attempts when a request fails |
 | `max_retries` | How many times to attempt each order before marking it as failed |
@@ -184,10 +194,10 @@ The script prints a line for each order, then a summary:
 ```
 [INFO] Shop            : https://your-shop.com
 [INFO] Orders to update: 3
-[INFO] Target status   : delivered
+[INFO] Target status   : completed
 ------------------------------------------------------------
-  [OK]   Order 1001  →  delivered
-  [OK]   Order 1002  →  delivered
+  [OK]   Order 1001  →  completed
+  [OK]   Order 1002  →  completed
   [FAIL] Order 1003  –  HTTP 404: {"code":"woocommerce_rest_shop_order_invalid_id"...}
 ------------------------------------------------------------
 [DONE] Success: 2   Failed: 1
@@ -218,4 +228,8 @@ The script prints a line for each order, then a summary:
 
 **`Request error: ... timed out`** — The server did not respond in time. Try increasing `request_timeout` in `config.ini`.
 
+---
 
+## Disclaimer
+
+These instructions were written with the assistance of an AI language model. While every effort has been made to ensure accuracy, you should verify the steps against the official documentation for your specific operating system and Python version.
